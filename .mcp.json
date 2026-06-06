@@ -1,15 +1,5 @@
 {
   "mcpServers": {
-    "awslabs.terraform-mcp-server": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "awslabs.terraform-mcp-server@latest"
-      ],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
     "aws-knowledge-mcp": {
       "type": "http",
       "url": "https://knowledge-mcp.global.api.aws"
@@ -38,6 +28,39 @@
     "atlassian": {
       "type": "http",
       "url": "https://mcp.atlassian.com/v1/mcp"
+    },
+    "terraform": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hashicorp/terraform-mcp-server"
+      ],
+      "description": "Official HashiCorp Terraform MCP server"
+    },
+    "ollama": {
+      "command": "/home/favl/.local/bin/ollama-mcp-server",
+      "env": {
+        "OLLAMA_HOST": "http://localhost:11434"
+      },
+      "description": "Ollama local inference (gpt-oss:20b, qwen2.5-coder:32b)"
+    },
+    "claude-code": {
+      "command": "/home/favl/.local/bin/claude",
+      "args": [
+        "mcp",
+        "serve"
+      ],
+      "description": "Claude Code coding agent (Anthropic Sonnet)"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/favl/spring-petclinic",
+        "/home/favl/robotics/FleetSafe-VisualNav-Benchmark"
+      ],
+      "description": "Direct filesystem access"
     }
   }
 }
