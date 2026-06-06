@@ -33,3 +33,35 @@ output "rds_sg_id" {
   description = "Prod RDS security group ID"
   value       = module.vpc.rds_sg_id
 }
+
+# ── EKS ───────────────────────────────────────────────────────────────────────
+output "eks_cluster_name" {
+  description = "Prod EKS cluster name"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "Prod EKS API endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_ca_certificate" {
+  description = "Prod EKS cluster CA certificate (base64)"
+  value       = module.eks.cluster_ca_certificate
+  sensitive   = true
+}
+
+output "eks_oidc_provider_arn" {
+  description = "Prod OIDC provider ARN"
+  value       = module.eks.oidc_provider_arn
+}
+
+output "eks_oidc_provider_url" {
+  description = "Prod OIDC provider URL"
+  value       = module.eks.oidc_provider_url
+}
+
+output "eks_node_role_arn" {
+  description = "Prod EKS node IAM role ARN"
+  value       = module.eks.node_role_arn
+}

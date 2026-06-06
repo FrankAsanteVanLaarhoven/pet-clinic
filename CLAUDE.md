@@ -113,9 +113,9 @@ Work tracked in `docs/jira-backlog.md`. Current status:
 |------|--------|
 | E-0 Claude Code Setup | ✅ Done |
 | E-1 Foundation & Remote State | ✅ Done (commit 7c3a8d6) |
-| E-2 Networking (VPC) | 🔲 Next |
-| E-3 EKS Cluster | 🔲 Blocked by E-2 |
-| E-4 ECR Registry | 🔲 Parallel with E-2 |
+| E-2 Networking (VPC) | ✅ Done (commit d12f791) |
+| E-3 EKS Cluster | 🔲 Next |
+| E-4 ECR Registry | 🔲 Parallel with E-3 |
 | E-5 RDS Database | 🔲 Blocked by E-2 |
 
 ## AWS Environment
