@@ -51,3 +51,19 @@ module "rds" {
   subnet_ids        = module.vpc.subnet_ids
   security_group_id = module.vpc.rds_sg_id
 }
+
+module "secrets" {
+  source = "../../modules/secrets"
+
+  project     = var.project
+  environment = var.environment
+  # openai_api_key is supplied via TF_VAR_openai_api_key env var — never in tfvars
+}
+
+module "dns" {
+  source = "../../modules/dns"
+
+  project     = var.project
+  environment = var.environment
+  domain_name = var.domain_name
+}

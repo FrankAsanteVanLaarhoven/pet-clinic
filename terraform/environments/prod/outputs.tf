@@ -92,3 +92,35 @@ output "rds_secret_arn" {
   description = "Prod RDS credentials secret ARN"
   value       = module.rds.secret_arn
 }
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+output "openai_secret_arn" {
+  description = "Prod OpenAI API key secret ARN"
+  value       = module.secrets.openai_secret_arn
+}
+
+output "eso_policy_arn" {
+  description = "Prod ESO IAM policy ARN (attach to ESO IRSA role)"
+  value       = module.secrets.eso_policy_arn
+}
+
+# ── DNS ───────────────────────────────────────────────────────────────────────
+output "route53_zone_id" {
+  description = "Prod Route 53 hosted zone ID"
+  value       = module.dns.zone_id
+}
+
+output "route53_name_servers" {
+  description = "Prod Route 53 NS records — delegate from registrar"
+  value       = module.dns.name_servers
+}
+
+output "acm_certificate_arn" {
+  description = "Prod ACM wildcard certificate ARN"
+  value       = module.dns.certificate_arn
+}
+
+output "alb_controller_policy_arn" {
+  description = "Prod ALB Controller IAM policy ARN"
+  value       = module.dns.alb_controller_policy_arn
+}

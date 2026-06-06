@@ -20,3 +20,8 @@ variable "project" {
   type        = string
   default     = "petclinic"
 }
+
+variable "domain_name" {
+  description = "Root domain name for Route 53 and ACM certificate (e.g. petclinic.example.com)"
+  type        = string
+}
