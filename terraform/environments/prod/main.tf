@@ -41,3 +41,13 @@ module "ecr" {
 
   image_tag_mutability = "IMMUTABLE"
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  project     = var.project
+  environment = var.environment
+
+  subnet_ids        = module.vpc.subnet_ids
+  security_group_id = module.vpc.rds_sg_id
+}

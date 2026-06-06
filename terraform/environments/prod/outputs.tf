@@ -76,3 +76,19 @@ output "ecr_repository_arns" {
   description = "Prod ECR repository ARNs (service_name → ARN)"
   value       = module.ecr.repository_arns
 }
+
+# ── RDS ───────────────────────────────────────────────────────────────────────
+output "rds_endpoint" {
+  description = "Prod RDS endpoint hostname"
+  value       = module.rds.endpoint
+}
+
+output "rds_port" {
+  description = "Prod RDS port"
+  value       = module.rds.port
+}
+
+output "rds_secret_arn" {
+  description = "Prod RDS credentials secret ARN"
+  value       = module.rds.secret_arn
+}
