@@ -1,11 +1,19 @@
 name: Build and Push to ECR
 
+# Runs in the app repo (spring-petclinic-microservices fork).
+# Copy this file to .github/workflows/build-push.yml in that repo.
+#
+# Trigger → Environment → ECR path → dispatch env
+# push to main  → dev   → petclinic-dev/{service}:{sha7}  → env=dev
+# push tag v*   → prod  → petclinic-prod/{service}:{tag}  → env=prod
+
 on:
   push:
     branches: [main]
+    tags: ["v*.*.*"]
 
 permissions:
-  id-token: write   # required for OIDC token
+  id-token: write   # OIDC token for AWS assume-role
   contents: read
 
 env:
@@ -13,6 +21,29 @@ env:
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
 jobs:
+  # ── Determine environment and ECR namespace from trigger ───────────────────
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.ctx.outputs.env }}
+      ecr_ns: ${{ steps.ctx.outputs.ecr_ns }}
+      image_tag: ${{ steps.ctx.outputs.image_tag }}
+    steps:
+      - name: Resolve env + tag
+        id: ctx
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "env=prod"       >> "$GITHUB_OUTPUT"
+            echo "ecr_ns=petclinic-prod" >> "$GITHUB_OUTPUT"
+            echo "image_tag=${TAG}"      >> "$GITHUB_OUTPUT"
+          else
+            SHORT="${GITHUB_SHA:0:7}"
+            echo "env=dev"        >> "$GITHUB_OUTPUT"
+            echo "ecr_ns=petclinic-dev"  >> "$GITHUB_OUTPUT"
+            echo "image_tag=${SHORT}"    >> "$GITHUB_OUTPUT"
+          fi
+
   # ── Detect which service directories changed ────────────────────────────────
   detect-changes:
     runs-on: ubuntu-latest
@@ -44,7 +75,7 @@ jobs:
 
   # ── Build ARM64 image, Trivy scan, push to ECR ─────────────────────────────
   build-and-push:
-    needs: detect-changes
+    needs: [setup, detect-changes]
     if: ${{ needs.detect-changes.outputs.matrix != '[]' && needs.detect-changes.outputs.matrix != '' }}
     runs-on: ubuntu-latest
 
@@ -101,18 +132,18 @@ jobs:
 
       - name: Tag and push to ECR
         env:
-          SHORT_SHA: ${{ github.sha }}
+          ECR_NS: ${{ needs.setup.outputs.ecr_ns }}
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
         run: |
-          SHORT="${SHORT_SHA:0:7}"
           SOURCE="springcommunity/spring-petclinic-${{ matrix.service }}:latest"
-          TARGET="${ECR_REGISTRY}/petclinic-dev/${{ matrix.service }}:${SHORT}"
+          TARGET="${ECR_REGISTRY}/${ECR_NS}/${{ matrix.service }}:${IMAGE_TAG}"
           docker tag "${SOURCE}" "${TARGET}"
           docker push "${TARGET}"
           echo "Pushed ${TARGET}"
 
   # ── Notify platform repo → triggers update-image-tags ──────────────────────
   dispatch-to-platform:
-    needs: build-and-push
+    needs: [setup, detect-changes, build-and-push]
     if: ${{ always() && needs.build-and-push.result == 'success' }}
     runs-on: ubuntu-latest
 
@@ -126,6 +157,7 @@ jobs:
           client-payload: |
             {
               "sha": "${{ github.sha }}",
-              "short_sha": "${{ github.sha && format('{0}', github.sha) }}",
+              "image_tag": "${{ needs.setup.outputs.image_tag }}",
+              "env": "${{ needs.setup.outputs.env }}",
               "services": "${{ join(fromJson(needs.detect-changes.outputs.matrix), ' ') }}"
             }

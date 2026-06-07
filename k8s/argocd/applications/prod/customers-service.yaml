@@ -17,6 +17,7 @@ spec:
     helm:
       valueFiles:
         - ../../helm-values/customers-service.yaml
+        - ../../helm-values/customers-service-prod.yaml
         - ../../helm-values/prod.yaml
   destination:
     server: https://kubernetes.default.svc

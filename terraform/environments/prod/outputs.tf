@@ -124,3 +124,34 @@ output "alb_controller_policy_arn" {
   description = "Prod ALB Controller IAM policy ARN"
   value       = module.dns.alb_controller_policy_arn
 }
+
+# ── Addon IRSA Roles ──────────────────────────────────────────────────────────
+output "eso_role_arn" {
+  description = "ESO IRSA role ARN — pass to install-addons.sh as ESO_ROLE_ARN"
+  value       = module.addons.eso_role_arn
+}
+
+output "alb_controller_role_arn" {
+  description = "ALB Controller IRSA role ARN — pass to install-addons.sh as ALB_ROLE_ARN"
+  value       = module.addons.alb_controller_role_arn
+}
+
+output "karpenter_controller_role_arn" {
+  description = "Karpenter controller IRSA role ARN"
+  value       = module.karpenter.controller_role_arn
+}
+
+output "karpenter_interruption_queue_url" {
+  description = "Karpenter interruption SQS queue URL"
+  value       = module.karpenter.interruption_queue_url
+}
+
+output "cloudwatch_agent_role_arn" {
+  description = "CloudWatch agent IRSA role ARN"
+  value       = module.observability.cloudwatch_agent_role_arn
+}
+
+output "grafana_role_arn" {
+  description = "Grafana IRSA role ARN (read CloudWatch metrics)"
+  value       = module.observability.grafana_role_arn
+}

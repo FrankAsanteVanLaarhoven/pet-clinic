@@ -1,0 +1,5 @@
+image:
+  repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/vets-service"
+
+config:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://PLACEHOLDER_RDS_PROD_ENDPOINT:3306/petclinic"

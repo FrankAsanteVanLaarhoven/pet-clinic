@@ -17,6 +17,7 @@ spec:
     helm:
       valueFiles:
         - ../../helm-values/genai-service.yaml
+        - ../../helm-values/genai-service-prod.yaml
         - ../../helm-values/prod.yaml
   destination:
     server: https://kubernetes.default.svc

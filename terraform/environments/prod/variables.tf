@@ -25,3 +25,9 @@ variable "domain_name" {
   description = "Root domain name for Route 53 and ACM certificate (e.g. petclinic.example.com)"
   type        = string
 }
+
+variable "budget_alert_email" {
+  description = "Email address for AWS Budget alerts ($15 warn, $30 alarm)"
+  type        = string
+  default     = "frankleroyvan@gmail.com"
+}

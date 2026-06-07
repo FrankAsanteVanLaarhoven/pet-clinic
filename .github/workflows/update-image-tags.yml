@@ -23,15 +23,22 @@ jobs:
 
       - name: Update image tags
         env:
-          SHA: ${{ github.event.client_payload.sha }}
+          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+          ENV: ${{ github.event.client_payload.env }}
           SERVICES: ${{ github.event.client_payload.services }}
         run: |
-          SHORT="${SHA:0:7}"
+          # dev → helm-values/{service}.yaml
+          # prod → helm-values/{service}-prod.yaml
+          SUFFIX=""
+          if [ "${ENV}" = "prod" ]; then
+            SUFFIX="-prod"
+          fi
+
           for service in ${SERVICES}; do
-            values_file="helm-values/${service}.yaml"
+            values_file="helm-values/${service}${SUFFIX}.yaml"
             if [ -f "${values_file}" ]; then
-              yq -i ".image.tag = \"${SHORT}\"" "${values_file}"
-              echo "Updated ${values_file} → tag: ${SHORT}"
+              yq -i ".image.tag = \"${IMAGE_TAG}\"" "${values_file}"
+              echo "Updated ${values_file} → tag: ${IMAGE_TAG}"
             else
               echo "Warning: ${values_file} not found, skipping"
             fi
@@ -39,14 +46,14 @@ jobs:
 
       - name: Commit and push
         env:
-          SHA: ${{ github.event.client_payload.sha }}
+          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
+          ENV: ${{ github.event.client_payload.env }}
           SERVICES: ${{ github.event.client_payload.services }}
         run: |
-          SHORT="${SHA:0:7}"
           SERVICE_LIST=$(echo "${SERVICES}" | tr ' ' ', ')
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add helm-values/
           git diff --staged --quiet || \
-            git commit -m "ci: update image tags to ${SHORT} (${SERVICE_LIST})"
+            git commit -m "ci(${ENV}): update image tags to ${IMAGE_TAG} (${SERVICE_LIST})"
           git push

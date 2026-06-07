@@ -67,3 +67,52 @@ module "dns" {
   environment = var.environment
   domain_name = var.domain_name
 }
+
+# github-oidc is a GLOBAL resource — already provisioned via dev environment. Do NOT add here.
+
+module "budget" {
+  source = "../../modules/budget"
+
+  project     = var.project
+  environment = var.environment
+  alert_email = var.budget_alert_email
+
+  warn_threshold_usd  = 15
+  alarm_threshold_usd = 30
+}
+
+module "karpenter" {
+  source = "../../modules/karpenter"
+
+  project     = var.project
+  environment = var.environment
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  node_role_arn     = module.eks.node_role_arn
+}
+
+module "observability" {
+  source = "../../modules/observability"
+
+  project     = var.project
+  environment = var.environment
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}
+
+module "addons" {
+  source = "../../modules/addons"
+
+  project     = var.project
+  environment = var.environment
+
+  oidc_provider_arn         = module.eks.oidc_provider_arn
+  oidc_provider_url         = module.eks.oidc_provider_url
+  eso_policy_arn            = module.secrets.eso_policy_arn
+  alb_controller_policy_arn = module.dns.alb_controller_policy_arn
+}
+
+data "aws_caller_identity" "current" {}

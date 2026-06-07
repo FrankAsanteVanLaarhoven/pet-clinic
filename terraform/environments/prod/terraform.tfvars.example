@@ -1,0 +1,5 @@
+aws_region   = "eu-central-1"
+environment  = "prod"
+project      = "petclinic"
+domain_name  = "petclinic.example.com"   # replace with your real domain
+# openai_api_key is set via TF_VAR_openai_api_key env var — never in tfvars
