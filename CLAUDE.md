@@ -24,16 +24,19 @@ Local LLM:    Ollama        → http://localhost:11434/v1  (gpt-oss:20b, qwen2.5
 ## Directory Layout
 
 ```
-terraform/environments/{dev,prod}/   # Root modules (one per environment)
-terraform/modules/{vpc,eks,ecr,rds,dns,secrets,observability,karpenter}/
-helm/petclinic-service/              # Generic Helm chart (shared by all 8 services)
-helm-values/                         # Per-service YAML + per-env (dev.yaml, prod.yaml)
-k8s/base/                            # Namespaces, external-secrets CRs
-k8s/argocd/install/                  # ArgoCD installation manifests
-k8s/argocd/applications/{dev,prod}/  # ArgoCD Application CRDs
-.github/workflows/                    # CI pipelines (build + push only, ArgoCD handles CD)
-scripts/                             # Operational scripts
-docs/                                # Architecture docs, runbooks, ADRs
+terraform/environments/{dev,prod}/          # Root modules (one per environment)
+terraform/modules/{vpc,eks,ecr,rds,dns,secrets,github-oidc,karpenter,observability}/
+helm/petclinic-service/                     # Generic Helm chart (shared by all 8 services)
+helm-values/{service}.yaml                  # Per-service overrides (8 files)
+helm-values/{dev,prod}.yaml                 # Per-env overrides
+k8s/base/{service}/                         # deployment, service, serviceaccount, configmap
+k8s/base/external-secrets/                  # ClusterSecretStore + 2 ExternalSecret CRs
+k8s/base/namespaces.yaml
+k8s/argocd/install/                         # ArgoCD installation manifests (E-17, next)
+k8s/argocd/applications/{dev,prod}/         # ArgoCD Application CRDs (E-16, next)
+.github/workflows/update-image-tags.yml     # repository_dispatch → yq patch → git commit
+scripts/{bootstrap-state,start-env,stop-env,env-status}.sh
+docs/{jira-backlog,technical-spec}.md
 ```
 
 ## Autonomous Task Execution
@@ -109,14 +112,21 @@ Claude Code MUST ask before:
 
 Work tracked in `docs/jira-backlog.md`. Current status:
 
-| Epic | Status |
-|------|--------|
-| E-0 Claude Code Setup | ✅ Done |
-| E-1 Foundation & Remote State | ✅ Done (commit 7c3a8d6) |
-| E-2 Networking (VPC) | ✅ Done (commit d12f791) |
-| E-3 EKS Cluster | 🔲 Next |
-| E-4 ECR Registry | 🔲 Parallel with E-3 |
-| E-5 RDS Database | 🔲 Blocked by E-2 |
+| Epic | Description | Status | Commit |
+|------|-------------|--------|--------|
+| E-0 | Claude Code Setup | ✅ Done | — |
+| E-1 | Foundation & Remote State | ✅ Done | `7c3a8d6` |
+| E-2 | Networking (VPC) | ✅ Done | `d12f791` |
+| E-3 | EKS Cluster | ✅ Done | `c7e0800` |
+| E-4 | ECR Registry | ✅ Done | `42a8d2e` |
+| E-5 | RDS Database | ✅ Done | `5267a1c` |
+| E-6 | DNS & TLS | ✅ Done | `e3be546` |
+| E-7 | Secrets Management | ✅ Done | `e3be546` |
+| E-8 | K8s Base Manifests | ✅ Done | `1b4a5a7` |
+| E-9 | Helm Chart | ✅ Done | `189192f` |
+| E-10 | CI Pipeline | ✅ Done | `104e625` |
+| E-16 | ArgoCD Application CRDs | 🔲 Next | — |
+| E-17 | ArgoCD Install Manifests | 🔲 Blocked by E-16 | — |
 
 ## AWS Environment
 
