@@ -1,0 +1,7 @@
+aws_region      = "eu-central-1"
+environment     = "dev"
+project         = "petclinic"
+domain_name     = "dev.petclinic.example.com"   # replace with your real domain
+github_org      = "FrankAsanteVanLaarhoven"
+github_app_repo = "spring-petclinic-microservices"
+# openai_api_key is set via TF_VAR_openai_api_key env var — never in tfvars
