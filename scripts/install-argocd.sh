@@ -13,8 +13,8 @@ kubectl apply -n argocd \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.11.3/manifests/install.yaml
 
 echo "==> Waiting for ArgoCD deployments to be ready"
-kubectl rollout status deployment/argocd-server         -n argocd --timeout=120s
-kubectl rollout status deployment/argocd-application-controller -n argocd --timeout=120s
+kubectl rollout status deployment/argocd-server                      -n argocd --timeout=120s
+kubectl rollout status statefulset/argocd-application-controller     -n argocd --timeout=120s
 
 echo "==> Patching ArgoCD ConfigMap"
 kubectl apply -f "${REPO_ROOT}/k8s/argocd/install/argocd-cm-patch.yaml"
