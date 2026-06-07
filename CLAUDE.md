@@ -128,9 +128,9 @@ Work tracked in `docs/jira-backlog.md`. Current status:
 | E-16 | ArgoCD Application CRDs | ✅ Done | `1f9fa89` |
 | E-17 | ArgoCD Install Manifests | ✅ Done | `1f9fa89` |
 | E-18 | ESO + ALB Controller (addons) | ✅ Done | `b54d3f5` |
-| E-11 | Observability (Prometheus/Grafana) | 🔲 Next | — |
-| E-13 | Security & Compliance | 🔲 Next | — |
-| E-14 | Karpenter autoscaler | 🔲 Backlog | — |
+| E-11 | Observability (Prometheus/Grafana) | ✅ Done | `c482455` |
+| E-13 | Security & Compliance | ✅ Done | `c482455` |
+| E-14 | Karpenter autoscaler | ✅ Done | `c482455` |
 
 ## AWS Environment
 
