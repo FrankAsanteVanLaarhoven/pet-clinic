@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: petclinic-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Petclinic prod environment
+  sourceRepos:
+    - https://github.com/FrankAsanteVanLaarhoven/pet-clinic.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: petclinic-prod
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

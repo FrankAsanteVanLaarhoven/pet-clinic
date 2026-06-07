@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: api-gateway-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    environment: prod
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: petclinic-prod
+  source:
+    repoURL: https://github.com/FrankAsanteVanLaarhoven/pet-clinic.git
+    targetRevision: main
+    path: helm/petclinic-service
+    helm:
+      valueFiles:
+        - ../../helm-values/api-gateway.yaml
+        - ../../helm-values/prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: petclinic-prod
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
