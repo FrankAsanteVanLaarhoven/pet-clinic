@@ -1,0 +1,105 @@
+name: Seed ECR — Pull springcommunity images → push to ECR
+
+# One-shot workflow to populate ECR with the official springcommunity images
+# so ArgoCD can do its first sync without needing the app repo fork.
+# Uses QEMU to pull the linux/arm64 variants (matches t4g.small Graviton nodes).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to use for pushed images"
+        required: true
+        default: "seed"
+        type: string
+      services:
+        description: "Space-separated list of services (leave blank for all 8)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REGISTRY: 158709926611.dkr.ecr.eu-central-1.amazonaws.com
+  TAG: ${{ github.event.inputs.tag }}
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU (ARM64 emulation)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.INFRA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Pull from Docker Hub and push to ECR
+        run: |
+          SERVICES="${{ github.event.inputs.services }}"
+          if [[ -z "$SERVICES" ]]; then
+            SERVICES="config-server discovery-server api-gateway customers-service visits-service vets-service genai-service admin-server"
+          fi
+
+          for svc in $SERVICES; do
+            SOURCE="springcommunity/spring-petclinic-${svc}:latest"
+            TARGET="${ECR_REGISTRY}/petclinic-dev/${svc}:${TAG}"
+
+            echo "==> Pulling ${SOURCE} (linux/arm64)"
+            docker pull --platform linux/arm64 "${SOURCE}"
+
+            echo "==> Pushing ${TARGET}"
+            docker tag "${SOURCE}" "${TARGET}"
+            docker push "${TARGET}"
+            echo "✓ ${TARGET}"
+          done
+
+      - name: Update helm-values with pushed tag
+        run: |
+          SERVICES="${{ github.event.inputs.services }}"
+          if [[ -z "$SERVICES" ]]; then
+            SERVICES="config-server discovery-server api-gateway customers-service visits-service vets-service genai-service admin-server"
+          fi
+
+          pip install yq 2>/dev/null || true
+
+          for svc in $SERVICES; do
+            FILE="helm-values/${svc}.yaml"
+            if [[ -f "$FILE" ]]; then
+              # Update .image.tag using python (yq not always available)
+              python3 - <<PYEOF
+import yaml, sys
+with open("${FILE}") as f:
+    data = yaml.safe_load(f)
+data.setdefault("image", {})["tag"] = "${TAG}"
+with open("${FILE}", "w") as f:
+    yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+print(f"Updated ${FILE} → tag: ${TAG}")
+PYEOF
+            fi
+          done
+
+      - name: Commit tag updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm-values/
+          git diff --cached --quiet || git commit -m "ci: seed ECR images with tag ${TAG}"
+          git push

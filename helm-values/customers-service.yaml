@@ -1,5 +1,5 @@
 image:
-  repository: ""  # CI sets: ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/petclinic-ENV/customers-service
+  repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/customers-service"
 
 service:
   port: 8081
