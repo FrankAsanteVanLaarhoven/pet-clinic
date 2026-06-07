@@ -256,16 +256,6 @@ resource "aws_security_group_rule" "rds_ingress_mysql_node" {
   source_security_group_id = aws_security_group.eks_node.id
 }
 
-resource "aws_security_group_rule" "rds_ingress_mysql_cluster" {
-  security_group_id        = aws_security_group.rds.id
-  type                     = "ingress"
-  description              = "MySQL from EKS cluster SG (managed node group)"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.eks_cluster.id
-}
-
 resource "aws_security_group_rule" "rds_egress_all" {
   security_group_id = aws_security_group.rds.id
   type              = "egress"
