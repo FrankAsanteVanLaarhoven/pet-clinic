@@ -25,3 +25,15 @@ variable "domain_name" {
   description = "Root domain name for Route 53 and ACM certificate (e.g. dev.petclinic.example.com)"
   type        = string
 }
+
+variable "github_org" {
+  description = "GitHub organisation or username that owns the app repo"
+  type        = string
+  default     = "FrankAsanteVanLaarhoven"
+}
+
+variable "github_app_repo" {
+  description = "Application repo name containing build-push.yml"
+  type        = string
+  default     = "spring-petclinic-microservices"
+}

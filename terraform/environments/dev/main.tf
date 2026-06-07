@@ -67,3 +67,14 @@ module "dns" {
   environment = var.environment
   domain_name = var.domain_name
 }
+
+# github-oidc is a global resource — provisioned once via dev environment
+module "github_oidc" {
+  source = "../../modules/github-oidc"
+
+  project         = var.project
+  github_org      = var.github_org
+  github_app_repo = var.github_app_repo
+
+  ecr_repository_arns = values(module.ecr.repository_arns)
+}

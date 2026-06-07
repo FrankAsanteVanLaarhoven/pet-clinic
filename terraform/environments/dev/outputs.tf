@@ -124,3 +124,9 @@ output "alb_controller_policy_arn" {
   description = "Dev ALB Controller IAM policy ARN"
   value       = module.dns.alb_controller_policy_arn
 }
+
+# ── GitHub Actions OIDC ───────────────────────────────────────────────────────
+output "github_actions_role_arn" {
+  description = "AWS_ROLE_ARN — set this as a GitHub secret in the app repo"
+  value       = module.github_oidc.role_arn
+}

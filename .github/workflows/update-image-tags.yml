@@ -1,0 +1,52 @@
+name: Update Image Tags
+
+on:
+  repository_dispatch:
+    types: [app-image-built]
+
+permissions:
+  contents: write
+
+jobs:
+  update-tags:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install yq
+        run: |
+          curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+            -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+
+      - name: Update image tags
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          SERVICES: ${{ github.event.client_payload.services }}
+        run: |
+          SHORT="${SHA:0:7}"
+          for service in ${SERVICES}; do
+            values_file="helm-values/${service}.yaml"
+            if [ -f "${values_file}" ]; then
+              yq -i ".image.tag = \"${SHORT}\"" "${values_file}"
+              echo "Updated ${values_file} → tag: ${SHORT}"
+            else
+              echo "Warning: ${values_file} not found, skipping"
+            fi
+          done
+
+      - name: Commit and push
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          SERVICES: ${{ github.event.client_payload.services }}
+        run: |
+          SHORT="${SHA:0:7}"
+          SERVICE_LIST=$(echo "${SERVICES}" | tr ' ' ', ')
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm-values/
+          git diff --staged --quiet || \
+            git commit -m "ci: update image tags to ${SHORT} (${SERVICE_LIST})"
+          git push
