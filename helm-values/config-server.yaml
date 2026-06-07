@@ -1,0 +1,17 @@
+image:
+  repository: ""  # CI sets: ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/petclinic-ENV/config-server
+
+service:
+  port: 8888
+
+probes:
+  startup:
+    path: /actuator/health
+  readiness:
+    path: /actuator/health
+  liveness:
+    path: /actuator/health
+
+config:
+  GIT_REPO: "https://github.com/spring-petclinic/spring-petclinic-microservices-config"
+  SPRING_PROFILES_ACTIVE: "docker"

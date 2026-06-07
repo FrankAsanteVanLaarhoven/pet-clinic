@@ -1,0 +1,88 @@
+replicaCount: 1
+
+image:
+  repository: ""       # Set per-service: ACCOUNT.dkr.ecr.eu-central-1.amazonaws.com/petclinic-ENV/SERVICE
+  tag: "latest"        # Overridden by CI/CD with commit SHA
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}      # Add IRSA annotation here when needed: eks.amazonaws.com/role-arn
+
+service:
+  type: ClusterIP
+  port: 8080           # Overridden per-service
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+probes:
+  startup:
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Additional env vars set per-service (e.g. DB credentials from Secrets)
+env: []
+# - name: SPRING_DATASOURCE_USERNAME
+#   valueFrom:
+#     secretKeyRef:
+#       name: rds-credentials
+#       key: username
+
+# ConfigMap data — key/value pairs mounted as env vars via envFrom
+config: {}
+# SPRING_PROFILES_ACTIVE: "docker"
+# CONFIG_SERVER_URL: "http://config-server:8888"
+
+# Init containers for startup ordering
+initContainers: []
+# - name: wait-for-config-server
+#   image: busybox:1.36
+#   command: ['sh', '-c', 'until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done']
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+securityContext:
+  pod:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  container:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    readOnlyRootFilesystem: false
+
+podAnnotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
