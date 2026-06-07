@@ -1,0 +1,131 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # required for OIDC token
+  contents: read
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+jobs:
+  # ── Detect which service directories changed ────────────────────────────────
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            config-server:
+              - 'spring-petclinic-config-server/**'
+            discovery-server:
+              - 'spring-petclinic-discovery-server/**'
+            api-gateway:
+              - 'spring-petclinic-api-gateway/**'
+            customers-service:
+              - 'spring-petclinic-customers-service/**'
+            visits-service:
+              - 'spring-petclinic-visits-service/**'
+            vets-service:
+              - 'spring-petclinic-vets-service/**'
+            genai-service:
+              - 'spring-petclinic-genai-service/**'
+            admin-server:
+              - 'spring-petclinic-admin-server/**'
+
+  # ── Build ARM64 image, Trivy scan, push to ECR ─────────────────────────────
+  build-and-push:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.matrix != '[]' && needs.detect-changes.outputs.matrix != '' }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Set up QEMU (ARM64 cross-compilation)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image (linux/arm64)
+        run: |
+          ./mvnw clean install \
+            -P buildDocker \
+            -pl spring-petclinic-${{ matrix.service }} \
+            -am \
+            -Dcontainer.platform="linux/arm64" \
+            -DskipTests \
+            --batch-mode
+
+      - name: Trivy scan — fail on CRITICAL
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: springcommunity/spring-petclinic-${{ matrix.service }}:latest
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL
+
+      - name: Tag and push to ECR
+        env:
+          SHORT_SHA: ${{ github.sha }}
+        run: |
+          SHORT="${SHORT_SHA:0:7}"
+          SOURCE="springcommunity/spring-petclinic-${{ matrix.service }}:latest"
+          TARGET="${ECR_REGISTRY}/petclinic-dev/${{ matrix.service }}:${SHORT}"
+          docker tag "${SOURCE}" "${TARGET}"
+          docker push "${TARGET}"
+          echo "Pushed ${TARGET}"
+
+  # ── Notify platform repo → triggers update-image-tags ──────────────────────
+  dispatch-to-platform:
+    needs: build-and-push
+    if: ${{ always() && needs.build-and-push.result == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fire repository_dispatch to platform repo
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.PLATFORM_REPO_TOKEN }}
+          repository: FrankAsanteVanLaarhoven/pet-clinic
+          event-type: app-image-built
+          client-payload: |
+            {
+              "sha": "${{ github.sha }}",
+              "short_sha": "${{ github.sha && format('{0}', github.sha) }}",
+              "services": "${{ join(fromJson(needs.detect-changes.outputs.matrix), ' ') }}"
+            }
