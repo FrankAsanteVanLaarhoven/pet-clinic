@@ -125,8 +125,12 @@ Work tracked in `docs/jira-backlog.md`. Current status:
 | E-8 | K8s Base Manifests | ✅ Done | `1b4a5a7` |
 | E-9 | Helm Chart | ✅ Done | `189192f` |
 | E-10 | CI Pipeline | ✅ Done | `104e625` |
-| E-16 | ArgoCD Application CRDs | 🔲 Next | — |
-| E-17 | ArgoCD Install Manifests | 🔲 Blocked by E-16 | — |
+| E-16 | ArgoCD Application CRDs | ✅ Done | `1f9fa89` |
+| E-17 | ArgoCD Install Manifests | ✅ Done | `1f9fa89` |
+| E-18 | ESO + ALB Controller (addons) | ✅ Done | `b54d3f5` |
+| E-11 | Observability (Prometheus/Grafana) | 🔲 Next | — |
+| E-13 | Security & Compliance | 🔲 Next | — |
+| E-14 | Karpenter autoscaler | 🔲 Backlog | — |
 
 ## AWS Environment
 
