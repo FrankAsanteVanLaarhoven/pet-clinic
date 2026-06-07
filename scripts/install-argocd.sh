@@ -40,3 +40,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 echo ""
 echo "==> ArgoCD UI: https://argocd.${DOMAIN}"
+
+echo ""
+echo "==> Installing cluster addons (ESO + ALB Controller)"
+bash "${REPO_ROOT}/scripts/install-addons.sh"

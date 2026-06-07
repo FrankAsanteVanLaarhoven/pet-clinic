@@ -44,7 +44,10 @@ data "aws_iam_policy_document" "eso_secrets_policy" {
       "secretsmanager:DescribeSecret",
     ]
     resources = [
+      # petclinic/dev/* — openai and future secrets
       "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/${var.environment}/*",
+      # petclinic-dev/* — RDS master secret (named with hyphen by the rds module)
+      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}-${var.environment}/*",
     ]
   }
 }

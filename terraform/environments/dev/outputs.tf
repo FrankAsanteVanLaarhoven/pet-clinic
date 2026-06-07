@@ -135,3 +135,14 @@ output "github_infra_ops_role_arn" {
   description = "INFRA_ROLE_ARN — set this as a GitHub secret in the platform repo (pet-clinic)"
   value       = module.github_oidc.infra_ops_role_arn
 }
+
+# ── Addon IRSA Roles ──────────────────────────────────────────────────────────
+output "eso_role_arn" {
+  description = "ESO IRSA role ARN — pass to install-addons.sh as ESO_ROLE_ARN"
+  value       = module.addons.eso_role_arn
+}
+
+output "alb_controller_role_arn" {
+  description = "ALB Controller IRSA role ARN — pass to install-addons.sh as ALB_ROLE_ARN"
+  value       = module.addons.alb_controller_role_arn
+}

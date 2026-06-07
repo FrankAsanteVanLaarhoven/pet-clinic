@@ -214,6 +214,26 @@ resource "aws_security_group_rule" "node_ingress_nodeport_from_alb" {
   source_security_group_id = aws_security_group.alb.id
 }
 
+resource "aws_security_group_rule" "node_ingress_pods_from_alb" {
+  security_group_id        = aws_security_group.eks_node.id
+  type                     = "ingress"
+  description              = "Pod ports from ALB (IP target group mode)"
+  from_port                = 8080
+  to_port                  = 9090
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+}
+
+resource "aws_security_group_rule" "alb_egress_pods" {
+  security_group_id        = aws_security_group.alb.id
+  type                     = "egress"
+  description              = "Pod ports to EKS nodes (IP target group mode)"
+  from_port                = 8080
+  to_port                  = 9090
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_node.id
+}
+
 resource "aws_security_group_rule" "node_egress_all" {
   security_group_id = aws_security_group.eks_node.id
   type              = "egress"

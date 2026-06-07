@@ -93,4 +93,16 @@ module "budget" {
   alarm_threshold_usd = 10
 }
 
+module "addons" {
+  source = "../../modules/addons"
+
+  project     = var.project
+  environment = var.environment
+
+  oidc_provider_arn         = module.eks.oidc_provider_arn
+  oidc_provider_url         = module.eks.oidc_provider_url
+  eso_policy_arn            = module.secrets.eso_policy_arn
+  alb_controller_policy_arn = module.dns.alb_controller_policy_arn
+}
+
 data "aws_caller_identity" "current" {}

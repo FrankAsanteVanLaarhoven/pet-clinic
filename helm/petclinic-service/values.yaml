@@ -81,6 +81,13 @@ securityContext:
       drop: ["ALL"]
     readOnlyRootFilesystem: false
 
+ingress:
+  enabled: false
+  scheme: internet-facing      # internet-facing | internal
+  targetType: ip               # ip | instance
+  certificateArn: ""           # ACM cert ARN — set to enable HTTPS
+  annotations: {}              # extra ALB annotations
+
 podAnnotations: {}
 
 nodeSelector: {}
