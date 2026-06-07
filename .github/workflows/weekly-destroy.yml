@@ -1,0 +1,83 @@
+name: Weekly Destroy — Full Teardown
+
+# Runs every Sunday at 22:00 UTC to eliminate the $0.10/hr EKS control plane cost.
+# Destroys all env resources EXCEPT github-oidc (OIDC provider + IAM roles must
+# persist so this workflow can re-create the environment on Monday).
+# Use manual-start.yml to recreate.
+on:
+  schedule:
+    - cron: "0 22 * * 0"   # Sunday 22:00 UTC
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to destroy"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+      confirm:
+        description: "Type DESTROY to confirm"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  TF_DIR: terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  destroy:
+    name: Destroy ${{ github.event.inputs.environment || 'dev' }} (scheduled)
+    runs-on: ubuntu-latest
+    # Guard: manual runs require explicit confirmation
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.confirm == 'DESTROY'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.6"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.INFRA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -input=false
+
+      # Destroy env resources but preserve github-oidc (IAM roles/OIDC provider
+      # must survive so scheduled workflows can re-create the environment)
+      - name: Terraform Destroy (excluding github-oidc)
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          terraform destroy -auto-approve -input=false \
+            -target=module.vpc \
+            -target=module.eks \
+            -target=module.ecr \
+            -target=module.rds \
+            -target=module.secrets \
+            -target=module.dns
+
+      - name: Summary
+        run: |
+          echo "## Destroy complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Environment **${{ env.ENVIRONMENT }}** torn down at $(date -u)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Still running (global — preserved):" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub OIDC provider + IAM roles" >> "$GITHUB_STEP_SUMMARY"
+          echo "- S3 state bucket + DynamoDB lock table" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run **manual-start.yml** to recreate (~12 min)." >> "$GITHUB_STEP_SUMMARY"

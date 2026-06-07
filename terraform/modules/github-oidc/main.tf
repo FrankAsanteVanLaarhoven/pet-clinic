@@ -96,3 +96,177 @@ resource "aws_iam_role_policy_attachment" "ecr_push" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.ecr_push.arn
 }
+
+# ── Infra-ops role — trusts platform repo, used by scheduled workflows ────────
+
+data "aws_iam_policy_document" "infra_ops_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    # Any workflow in the platform repo (nightly-stop, weekly-destroy, manual-start)
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:${var.github_org}/${var.github_platform_repo}:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "infra_ops" {
+  name               = "${var.project}-github-infra-ops-role"
+  assume_role_policy = data.aws_iam_policy_document.infra_ops_assume_role.json
+  description        = "OIDC role for GitHub Actions scheduled infra workflows (stop/start/destroy)"
+
+  tags = merge(local.common_tags, { Name = "${var.project}-github-infra-ops-role" })
+}
+
+# Scoped infra-ops policy: terraform state + all petclinic AWS resources
+data "aws_iam_policy_document" "infra_ops" {
+  # Terraform state backend
+  statement {
+    sid    = "TerraformStateS3"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+      "s3:ListBucket", "s3:GetBucketVersioning",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.state_bucket_name}",
+      "arn:aws:s3:::${var.state_bucket_name}/*",
+    ]
+  }
+
+  statement {
+    sid    = "TerraformStateDynamoDB"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem",
+      "dynamodb:DescribeTable",
+    ]
+    resources = ["arn:aws:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/petclinic-terraform-locks"]
+  }
+
+  # EKS — scale nodes + describe (for stop/start scripts)
+  statement {
+    sid    = "EKSManage"
+    effect = "Allow"
+    actions = [
+      "eks:*",
+    ]
+    resources = ["arn:aws:eks:*:${data.aws_caller_identity.current.account_id}:cluster/petclinic-*",
+    "arn:aws:eks:*:${data.aws_caller_identity.current.account_id}:nodegroup/petclinic-*/*/*"]
+  }
+
+  # RDS — stop/start
+  statement {
+    sid    = "RDSManage"
+    effect = "Allow"
+    actions = [
+      "rds:StopDBInstance", "rds:StartDBInstance",
+      "rds:DescribeDBInstances", "rds:DeleteDBInstance",
+      "rds:CreateDBInstance", "rds:ModifyDBInstance",
+      "rds:CreateDBSubnetGroup", "rds:DeleteDBSubnetGroup", "rds:DescribeDBSubnetGroups",
+      "rds:CreateDBParameterGroup", "rds:DeleteDBParameterGroup", "rds:DescribeDBParameterGroups",
+      "rds:ModifyDBParameterGroup", "rds:DescribeDBParameters",
+      "rds:AddTagsToResource", "rds:RemoveTagsFromResource", "rds:ListTagsForResource",
+    ]
+    resources = ["*"]
+  }
+
+  # EC2 / VPC — full management for terraform apply/destroy
+  statement {
+    sid       = "EC2VPCManage"
+    effect    = "Allow"
+    actions   = ["ec2:*"]
+    resources = ["*"]
+  }
+
+  # ECR — manage repos
+  statement {
+    sid       = "ECRManage"
+    effect    = "Allow"
+    actions   = ["ecr:*"]
+    resources = ["*"]
+  }
+
+  # Secrets Manager — petclinic namespace only
+  statement {
+    sid    = "SecretsManage"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:CreateSecret", "secretsmanager:DeleteSecret",
+      "secretsmanager:UpdateSecret", "secretsmanager:PutSecretValue",
+      "secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret",
+      "secretsmanager:TagResource", "secretsmanager:UntagResource",
+      "secretsmanager:ListSecrets",
+    ]
+    resources = ["arn:aws:secretsmanager:*:${data.aws_caller_identity.current.account_id}:secret:petclinic/*"]
+  }
+
+  # Route 53 + ACM
+  statement {
+    sid       = "DNSTLSManage"
+    effect    = "Allow"
+    actions   = ["route53:*", "acm:*"]
+    resources = ["*"]
+  }
+
+  # IAM — manage petclinic roles/policies only
+  statement {
+    sid    = "IAMManagePetclinic"
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:UpdateRole",
+      "iam:PassRole", "iam:TagRole", "iam:UntagRole",
+      "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies", "iam:PutRolePolicy", "iam:DeleteRolePolicy",
+      "iam:GetRolePolicy", "iam:CreatePolicy", "iam:DeletePolicy",
+      "iam:GetPolicy", "iam:GetPolicyVersion", "iam:CreatePolicyVersion",
+      "iam:DeletePolicyVersion", "iam:ListPolicyVersions",
+      "iam:CreateOpenIDConnectProvider", "iam:DeleteOpenIDConnectProvider",
+      "iam:GetOpenIDConnectProvider", "iam:TagOpenIDConnectProvider",
+    ]
+    resources = ["*"]
+  }
+
+  # Budgets
+  statement {
+    sid       = "BudgetsManage"
+    effect    = "Allow"
+    actions   = ["budgets:*"]
+    resources = ["*"]
+  }
+
+  # STS — get caller identity (used by bootstrap + validation)
+  statement {
+    sid       = "STSIdentity"
+    effect    = "Allow"
+    actions   = ["sts:GetCallerIdentity"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "infra_ops" {
+  name        = "${var.project}-github-infra-ops"
+  description = "Scoped infra management permissions for GitHub Actions scheduled workflows"
+  policy      = data.aws_iam_policy_document.infra_ops.json
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "infra_ops" {
+  role       = aws_iam_role.infra_ops.name
+  policy_arn = aws_iam_policy.infra_ops.arn
+}

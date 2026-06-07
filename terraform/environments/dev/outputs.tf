@@ -130,3 +130,8 @@ output "github_actions_role_arn" {
   description = "AWS_ROLE_ARN — set this as a GitHub secret in the app repo"
   value       = module.github_oidc.role_arn
 }
+
+output "github_infra_ops_role_arn" {
+  description = "INFRA_ROLE_ARN — set this as a GitHub secret in the platform repo (pet-clinic)"
+  value       = module.github_oidc.infra_ops_role_arn
+}

@@ -5,8 +5,8 @@ set -euo pipefail
 # stop-env.sh — Pause your AWS environment to save costs
 #
 # Stops RDS and scales EKS node group to 0 nodes.
-# EKS control plane stays running (~$3.30/day) but compute and DB stop.
-# Saves approximately $3-8/day depending on instance sizes.
+# EKS control plane stays running ($0.10/hr = $2.40/day) but compute and DB stop.
+# For zero cost: use weekly-destroy.yml or terraform destroy.
 #
 # Usage:
 #   ./scripts/stop-env.sh dev
@@ -115,12 +115,13 @@ echo "============================================"
 echo "  Environment ${ENV} is stopping."
 echo ""
 echo "  Still running (you pay for):"
-echo "    - EKS control plane (~\$3.30/day)"
-echo "    - Any EBS volumes attached to nodes"
+echo "    - EKS control plane (\$0.10/hr = \$2.40/day)"
 echo ""
-echo "  Stopped (no charge):"
-echo "    - EC2 instances (node group)"
-echo "    - RDS instance (when fully stopped)"
+echo "  Stopped (free):"
+echo "    - EC2 nodes (t4g.small — Graviton free trial)"
+echo "    - RDS db.t4g.micro (free tier when stopped)"
+echo ""
+echo "  To eliminate ALL costs: weekly-destroy.yml or terraform destroy"
 echo ""
 echo "  To fully destroy: terraform destroy"
 echo "  To restart:       ./scripts/start-env.sh ${ENV}"

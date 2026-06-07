@@ -23,27 +23,47 @@ variable "security_group_id" {
 }
 
 variable "instance_class" {
-  description = "RDS instance class"
+  description = "RDS instance class — must be free-tier eligible (db.t4g.micro or db.t3.micro)"
   type        = string
   default     = "db.t4g.micro"
+
+  validation {
+    condition     = contains(["db.t4g.micro", "db.t3.micro"], var.instance_class)
+    error_message = "instance_class must be db.t4g.micro or db.t3.micro (RDS free tier). Got: ${var.instance_class}"
+  }
 }
 
 variable "allocated_storage" {
-  description = "Initial allocated storage in GB"
+  description = "Initial allocated storage in GB — capped at 20 GB (free tier limit)"
   type        = number
   default     = 20
+
+  validation {
+    condition     = var.allocated_storage <= 20
+    error_message = "allocated_storage must be ≤ 20 GB to stay within the RDS free tier."
+  }
 }
 
 variable "max_allocated_storage" {
-  description = "Maximum storage autoscaling ceiling in GB (set equal to allocated_storage to disable autoscaling)"
+  description = "Storage autoscaling ceiling — set equal to allocated_storage to disable autoscaling"
   type        = number
   default     = 20
+
+  validation {
+    condition     = var.max_allocated_storage <= 20
+    error_message = "max_allocated_storage must be ≤ 20 GB to prevent unexpected storage costs."
+  }
 }
 
 variable "multi_az" {
-  description = "Enable Multi-AZ deployment"
+  description = "Multi-AZ deployment — must stay false (doubles cost, not needed for dev)"
   type        = bool
   default     = false
+
+  validation {
+    condition     = var.multi_az == false
+    error_message = "multi_az must be false. Multi-AZ doubles RDS cost (~$30/mo extra). Use read replicas if HA is needed."
+  }
 }
 
 variable "backup_retention_period" {

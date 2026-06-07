@@ -1,0 +1,43 @@
+name: Nightly Stop — Scale to Zero
+
+# Runs every night at 20:00 UTC. Scales EKS nodes to 0 and stops RDS.
+# EKS control plane keeps running ($0.10/hr). Use weekly-destroy for full shutdown.
+on:
+  schedule:
+    - cron: "0 20 * * *"   # 20:00 UTC daily (21:00 CET / 22:00 CEST)
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+    inputs:
+      environment:
+        description: "Environment to stop (dev or prod)"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  stop:
+    name: Scale to zero (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.INFRA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Stop environment
+        run: bash scripts/stop-env.sh ${{ env.ENVIRONMENT }}
+
+      - name: Report status
+        if: always()
+        run: bash scripts/env-status.sh ${{ env.ENVIRONMENT }}

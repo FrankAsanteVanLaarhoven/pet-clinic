@@ -18,6 +18,17 @@ variable "ecr_repository_arns" {
   type        = list(string)
 }
 
+variable "github_platform_repo" {
+  description = "Platform repo name (pet-clinic) — infra-ops role trusts this repo"
+  type        = string
+  default     = "pet-clinic"
+}
+
+variable "state_bucket_name" {
+  description = "S3 bucket name holding Terraform state — infra-ops role needs read/write access"
+  type        = string
+}
+
 variable "tags" {
   description = "Additional tags to merge onto resources"
   type        = map(string)

@@ -37,3 +37,15 @@ variable "github_app_repo" {
   type        = string
   default     = "spring-petclinic-microservices"
 }
+
+variable "github_platform_repo" {
+  description = "Platform repo name containing infra workflows (nightly-stop, weekly-destroy, manual-start)"
+  type        = string
+  default     = "pet-clinic"
+}
+
+variable "budget_alert_email" {
+  description = "Email address for AWS Budget alerts ($5 warn, $10 alarm)"
+  type        = string
+  default     = "frankleroyvan@gmail.com"
+}

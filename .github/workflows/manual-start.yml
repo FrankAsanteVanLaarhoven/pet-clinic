@@ -1,0 +1,92 @@
+name: Manual Start — Terraform Apply
+
+# On-demand environment recreation after weekly-destroy.
+# Runs terraform apply to rebuild VPC, EKS, ECR, RDS, DNS, Secrets.
+# Takes ~12 minutes (EKS cluster creation dominates).
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to create/update"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-central-1
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
+  TF_DIR: terraform/environments/${{ github.event.inputs.environment }}
+
+jobs:
+  apply:
+    name: Apply ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.6"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.INFRA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_DIR }}
+        id: plan
+        env:
+          TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        run: terraform plan -input=false -out=plan.out
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        run: terraform apply -input=false plan.out
+
+      - name: Update kubeconfig and show outputs
+        run: |
+          CLUSTER="petclinic-${{ env.ENVIRONMENT }}"
+          aws eks update-kubeconfig --name "$CLUSTER" --region "${{ env.AWS_REGION }}"
+          echo "## Apply complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cluster **$CLUSTER** is ready." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run ArgoCD bootstrap if first time:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "bash scripts/install-argocd.sh <domain> <acm-cert-arn>" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Scale-check — confirm free-tier node type
+        run: |
+          CLUSTER="petclinic-${{ env.ENVIRONMENT }}"
+          NG="petclinic-${{ env.ENVIRONMENT }}-nodes"
+          ITYPE=$(aws eks describe-nodegroup \
+            --cluster-name "$CLUSTER" \
+            --nodegroup-name "$NG" \
+            --region "${{ env.AWS_REGION }}" \
+            --query 'nodegroup.instanceTypes[0]' \
+            --output text)
+          echo "Node instance type: $ITYPE"
+          if [[ "$ITYPE" != t4g.* ]]; then
+            echo "ERROR: expected t4g.* but got $ITYPE" >&2
+            exit 1
+          fi

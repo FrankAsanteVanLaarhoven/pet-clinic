@@ -72,9 +72,25 @@ module "dns" {
 module "github_oidc" {
   source = "../../modules/github-oidc"
 
-  project         = var.project
-  github_org      = var.github_org
-  github_app_repo = var.github_app_repo
+  project              = var.project
+  github_org           = var.github_org
+  github_app_repo      = var.github_app_repo
+  github_platform_repo = var.github_platform_repo
+  state_bucket_name    = "petclinic-terraform-state-${data.aws_caller_identity.current.account_id}"
 
   ecr_repository_arns = values(module.ecr.repository_arns)
 }
+
+# AWS Budget — email alerts at $5 (warn) and $10 (alarm)
+module "budget" {
+  source = "../../modules/budget"
+
+  project     = var.project
+  environment = var.environment
+  alert_email = var.budget_alert_email
+
+  warn_threshold_usd  = 5
+  alarm_threshold_usd = 10
+}
+
+data "aws_caller_identity" "current" {}
