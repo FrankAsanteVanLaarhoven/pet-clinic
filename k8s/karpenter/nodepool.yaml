@@ -4,9 +4,7 @@ metadata:
   name: petclinic-default
 spec:
   template:
-    metadata:
-      labels:
-        karpenter.sh/nodepool: petclinic-default
+    metadata: {}
     spec:
       nodeClassRef:
         name: petclinic-default
@@ -26,9 +24,6 @@ spec:
         - key: topology.kubernetes.io/zone
           operator: In
           values: [eu-central-1a, eu-central-1b]
-
-      # Evict idle nodes after 10 minutes
-      expireAfter: Never
 
   # Scale-to-zero: remove node when no workloads scheduled
   disruption:

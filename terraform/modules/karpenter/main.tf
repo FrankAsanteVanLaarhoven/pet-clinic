@@ -60,6 +60,32 @@ data "aws_iam_policy_document" "karpenter_controller" {
   }
 
   statement {
+    sid    = "AllowSSMForAMIDiscovery"
+    effect = "Allow"
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = [
+      "arn:aws:ssm:${data.aws_region.current.name}::parameter/aws/service/eks/optimized-ami/*",
+      "arn:aws:ssm:${data.aws_region.current.name}::parameter/aws/service/bottlerocket/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowIAMInstanceProfiles"
+    effect = "Allow"
+    actions = [
+      "iam:GetInstanceProfile",
+      "iam:CreateInstanceProfile",
+      "iam:DeleteInstanceProfile",
+      "iam:AddRoleToInstanceProfile",
+      "iam:RemoveRoleFromInstanceProfile",
+      "iam:TagInstanceProfile",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
     sid       = "AllowIAMPassRole"
     effect    = "Allow"
     actions   = ["iam:PassRole"]

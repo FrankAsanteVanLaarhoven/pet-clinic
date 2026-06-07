@@ -30,7 +30,7 @@ helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null ||
 helm repo add eks https://aws.github.io/eks-charts 2>/dev/null || true
 helm repo add open-policy-agent https://open-policy-agent.github.io/gatekeeper/charts 2>/dev/null || true
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
-helm repo add karpenter https://charts.karpenter.sh 2>/dev/null || true
+# karpenter chart is OCI-based — no repo add needed (use oci:// at install time)
 helm repo update
 
 # ── OPA Gatekeeper ────────────────────────────────────────────────────────────
@@ -45,7 +45,21 @@ helm upgrade --install gatekeeper open-policy-agent/gatekeeper \
   --wait \
   --timeout 5m
 
-echo "==> Applying Gatekeeper constraint templates + constraints"
+echo "==> Applying Gatekeeper constraint templates (pass 1 — templates only, constraints may fail)"
+kubectl apply -f "${REPO_ROOT}/k8s/base/gatekeeper/" 2>/dev/null || true
+
+echo "==> Waiting for Gatekeeper Constraint CRDs to be established (up to 90s)"
+for crd in requirenonroot requireresourcelimits requirepetcliniclabels; do
+  timeout=90
+  until kubectl get crd "${crd}.constraints.gatekeeper.sh" &>/dev/null; do
+    timeout=$((timeout - 3)); [ $timeout -le 0 ] && break
+    sleep 3
+  done
+  kubectl get crd "${crd}.constraints.gatekeeper.sh" &>/dev/null && \
+    echo "  CRD ready: ${crd}" || echo "  WARNING: CRD not ready: ${crd}"
+done
+
+echo "==> Applying Gatekeeper constraints (pass 2)"
 kubectl apply -f "${REPO_ROOT}/k8s/base/gatekeeper/"
 
 # ── External Secrets Operator ─────────────────────────────────────────────────
@@ -90,6 +104,9 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
 echo "==> Deploying kube-prometheus-stack via ArgoCD"
 kubectl apply -f "${REPO_ROOT}/k8s/argocd/applications/addons/kube-prometheus-stack.yaml"
 
+echo "==> Ensuring monitoring namespace exists"
+kubectl create namespace monitoring 2>/dev/null || true
+
 echo "==> Patching Grafana service account with IRSA annotation"
 kubectl annotate serviceaccount grafana \
   -n monitoring \
@@ -97,13 +114,14 @@ kubectl annotate serviceaccount grafana \
   --overwrite 2>/dev/null || true
 
 echo "==> Applying Grafana dashboards"
-kubectl apply -f "${REPO_ROOT}/k8s/base/grafana/"
+kubectl apply -f "${REPO_ROOT}/k8s/base/grafana/" 2>/dev/null || \
+  echo "  (Grafana dashboards deferred — monitoring namespace not fully ready yet)"
 
 # ── Karpenter ─────────────────────────────────────────────────────────────────
 if [ -n "$KARPENTER_ROLE_ARN" ] && [ -n "$KARPENTER_QUEUE_URL" ]; then
   echo "==> Installing Karpenter v0.37"
   KARPENTER_QUEUE_NAME="${KARPENTER_QUEUE_URL##*/}"
-  helm upgrade --install karpenter karpenter/karpenter \
+  helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
     --namespace karpenter \
     --create-namespace \
     --version "0.37.0" \
