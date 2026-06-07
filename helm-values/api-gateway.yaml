@@ -1,3 +1,5 @@
+fullnameOverride: api-gateway
+
 image:
   tag: "seed"
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/api-gateway"
