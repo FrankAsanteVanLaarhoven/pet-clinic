@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spring-boot-jvm-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  spring-boot-jvm.json: |
+    {
+      "title": "Spring Boot JVM (Micrometer)",
+      "uid": "petclinic-jvm",
+      "tags": ["petclinic", "spring-boot", "jvm"],
+      "schemaVersion": 38,
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "JVM Heap Used",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [{
+            "expr": "jvm_memory_used_bytes{area=\"heap\",namespace=~\"petclinic-.*\"}",
+            "legendFormat": "{{pod}} - {{id}}"
+          }],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        },
+        {
+          "id": 2,
+          "title": "HTTP Request Rate (req/s)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [{
+            "expr": "rate(http_server_requests_seconds_count{namespace=~\"petclinic-.*\"}[2m])",
+            "legendFormat": "{{pod}} {{method}} {{uri}} {{status}}"
+          }]
+        },
+        {
+          "id": 3,
+          "title": "HTTP Error Rate (5xx)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [{
+            "expr": "rate(http_server_requests_seconds_count{status=~\"5..\",namespace=~\"petclinic-.*\"}[2m])",
+            "legendFormat": "{{pod}} {{uri}}"
+          }]
+        },
+        {
+          "id": 4,
+          "title": "GC Pause Time (p99)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [{
+            "expr": "histogram_quantile(0.99, rate(jvm_gc_pause_seconds_bucket{namespace=~\"petclinic-.*\"}[5m]))",
+            "legendFormat": "{{pod}} {{action}} {{cause}}"
+          }],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        }
+      ]
+    }

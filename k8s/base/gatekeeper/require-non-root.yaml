@@ -1,0 +1,39 @@
+# ConstraintTemplate: containers must run as non-root.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requirenonroot
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireNonRoot
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requirenonroot
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not input.review.object.spec.securityContext.runAsNonRoot
+          not container.securityContext.runAsNonRoot
+          msg := sprintf("container '%v' must set runAsNonRoot: true", [container.name])
+        }
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.runAsUser == 0
+          msg := sprintf("container '%v' must not run as root (runAsUser: 0)", [container.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireNonRoot
+metadata:
+  name: require-non-root
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - petclinic-dev
+      - petclinic-prod

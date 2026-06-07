@@ -93,6 +93,28 @@ module "budget" {
   alarm_threshold_usd = 10
 }
 
+module "karpenter" {
+  source = "../../modules/karpenter"
+
+  project     = var.project
+  environment = var.environment
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  node_role_arn     = module.eks.node_role_arn
+}
+
+module "observability" {
+  source = "../../modules/observability"
+
+  project     = var.project
+  environment = var.environment
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}
+
 module "addons" {
   source = "../../modules/addons"
 

@@ -1,0 +1,44 @@
+# ConstraintTemplate: every workload must carry the petclinic standard labels.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requirepetcliniclabels
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequirePetclinicLabels
+      validation:
+        openAPIV3Schema:
+          properties:
+            labels:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requirepetcliniclabels
+        violation[{"msg": msg}] {
+          required := input.parameters.labels[_]
+          not input.review.object.metadata.labels[required]
+          msg := sprintf("resource is missing required label: %v", [required])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequirePetclinicLabels
+metadata:
+  name: require-petclinic-labels
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    namespaces:
+      - petclinic-dev
+      - petclinic-prod
+  parameters:
+    labels:
+      - app.kubernetes.io/name
+      - app.kubernetes.io/part-of

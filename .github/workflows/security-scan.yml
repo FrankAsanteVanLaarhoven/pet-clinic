@@ -1,0 +1,99 @@
+name: Security Scan — Checkov + Trivy IaC
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write   # upload SARIF to GitHub Security tab
+
+jobs:
+  checkov:
+    name: Checkov — Terraform + K8s + Helm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkov — Terraform
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-terraform.sarif
+          soft_fail: true
+          skip_check: >-
+            CKV_AWS_144,
+            CKV_AWS_145,
+            CKV2_AWS_62
+
+      - name: Checkov — Kubernetes manifests
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: k8s/
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: checkov-k8s.sarif
+          soft_fail: true
+
+      - name: Checkov — Helm chart
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: helm/
+          framework: helm
+          output_format: sarif
+          output_file_path: checkov-helm.sarif
+          soft_fail: true
+
+      - name: Upload Checkov SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-terraform.sarif
+          category: checkov-terraform
+
+  trivy-iac:
+    name: Trivy — IaC misconfig scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy — Terraform IaC
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: terraform/
+          format: sarif
+          output: trivy-terraform.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      - name: Trivy — K8s manifests
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: k8s/
+          format: sarif
+          output: trivy-k8s.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-terraform.sarif
+          category: trivy-iac
+
+      - name: Save scan artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            checkov-*.sarif
+            trivy-*.sarif
+          retention-days: 30

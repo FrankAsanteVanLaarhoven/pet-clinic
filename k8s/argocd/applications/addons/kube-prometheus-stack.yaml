@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: "65.3.1"
+    helm:
+      valuesObject:
+        fullnameOverride: prometheus
+        grafana:
+          enabled: true
+          fullnameOverride: grafana
+          adminPassword: petclinic-grafana   # change via secret in prod
+          serviceAccount:
+            annotations:
+              eks.amazonaws.com/role-arn: ""  # set at install time via patch
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+          additionalDataSources:
+            - name: CloudWatch
+              type: cloudwatch
+              jsonData:
+                defaultRegion: eu-central-1
+                authType: default
+          service:
+            type: ClusterIP
+        prometheus:
+          prometheusSpec:
+            retention: 7d
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: gp2
+                  accessModes: [ReadWriteOnce]
+                  resources:
+                    requests:
+                      storage: 10Gi
+            serviceMonitorSelectorNilUsesHelmValues: false
+            serviceMonitorNamespaceSelector: {}
+        alertmanager:
+          enabled: false   # reduce footprint in dev
+        nodeExporter:
+          enabled: true
+        kubeStateMetrics:
+          enabled: true
+        defaultRules:
+          create: true
+          rules:
+            alertmanager: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

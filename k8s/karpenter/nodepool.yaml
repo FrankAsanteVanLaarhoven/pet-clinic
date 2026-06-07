@@ -1,0 +1,41 @@
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata:
+  name: petclinic-default
+spec:
+  template:
+    metadata:
+      labels:
+        karpenter.sh/nodepool: petclinic-default
+    spec:
+      nodeClassRef:
+        name: petclinic-default
+
+      # Only Graviton instances — cost-guard constraint (matches existing t4g.small nodes)
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand, spot]
+        - key: kubernetes.io/arch
+          operator: In
+          values: [arm64]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          # t4g.small (baseline), t4g.medium (if more memory needed)
+          values: [t4g.small, t4g.medium]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-central-1a, eu-central-1b]
+
+      # Evict idle nodes after 10 minutes
+      expireAfter: Never
+
+  # Scale-to-zero: remove node when no workloads scheduled
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 10m
+
+  # Limit total CPU/memory to stay within budget
+  limits:
+    cpu: "8"
+    memory: 8Gi

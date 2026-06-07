@@ -1,0 +1,33 @@
+apiVersion: karpenter.k8s.aws/v1beta1
+kind: EC2NodeClass
+metadata:
+  name: petclinic-default
+spec:
+  # Use the same IAM role as the managed node group — nodes join the cluster automatically
+  role: petclinic-dev-eks-node-role   # set via install-addons.sh patch
+
+  # Amazon Linux 2023 ARM64 — matches t4g Graviton instances
+  amiFamily: AL2023
+
+  # Subnets and security groups discovered by tag
+  subnetSelectorTerms:
+    - tags:
+        kubernetes.io/cluster/petclinic-dev: shared
+
+  securityGroupSelectorTerms:
+    - tags:
+        Name: petclinic-dev-eks-node-sg
+
+  # 20 GB gp3 root volume — matches cost-guard constraints
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true
+
+  tags:
+    Project:     petclinic
+    Environment: dev
+    ManagedBy:   karpenter
