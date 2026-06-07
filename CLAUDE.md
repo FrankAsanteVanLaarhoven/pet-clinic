@@ -131,6 +131,8 @@ Work tracked in `docs/jira-backlog.md`. Current status:
 | E-11 | Observability (Prometheus/Grafana) | ✅ Done | `c482455` |
 | E-13 | Security & Compliance | ✅ Done | `c482455` |
 | E-14 | Karpenter autoscaler | ✅ Done | `c482455` |
+| E-15 | Prod Environment Terraform | ✅ Done | `f281285` |
+| E-12 | App repo fork CI/CD | ✅ Done | `f281285` |
 
 ## AWS Environment
 
