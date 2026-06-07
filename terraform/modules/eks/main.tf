@@ -130,10 +130,6 @@ resource "aws_eks_node_group" "main" {
     max_unavailable = 1
   }
 
-  remote_access {
-    ec2_ssh_key               = null
-    source_security_group_ids = [var.node_sg_id]
-  }
 
   tags = merge(local.common_tags, { Name = "${local.name}-nodes" })
 

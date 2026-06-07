@@ -17,6 +17,12 @@ variable "domain_name" {
   type        = string
 }
 
+variable "create_certificate" {
+  description = "Create ACM wildcard cert. Set false until NS records are delegated to Route 53 — the provider blocks until the cert is ISSUED."
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Additional tags to merge onto resources"
   type        = map(string)

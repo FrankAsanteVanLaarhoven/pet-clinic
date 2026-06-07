@@ -14,8 +14,8 @@ output "name_servers" {
 }
 
 output "certificate_arn" {
-  description = "ACM wildcard certificate ARN (validated)"
-  value       = aws_acm_certificate_validation.wildcard.certificate_arn
+  description = "ACM wildcard certificate ARN — empty string if create_certificate = false"
+  value       = var.create_certificate ? aws_acm_certificate.wildcard[0].arn : ""
 }
 
 output "alb_controller_policy_arn" {

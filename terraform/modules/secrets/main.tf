@@ -20,11 +20,12 @@ resource "aws_secretsmanager_secret" "openai_api_key" {
 }
 
 resource "aws_secretsmanager_secret_version" "openai_api_key" {
+  count = var.openai_api_key != "" ? 1 : 0
+
   secret_id     = aws_secretsmanager_secret.openai_api_key.id
   secret_string = var.openai_api_key
 
   lifecycle {
-    # Prevent Terraform from overwriting a key that was rotated out-of-band
     ignore_changes = [secret_string]
   }
 }
