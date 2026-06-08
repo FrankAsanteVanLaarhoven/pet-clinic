@@ -1,6 +1,6 @@
 fullnameOverride: visits-service
 image:
-  tag: ""
+  tag: "4920da2"
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/visits-service"
 service:
   port: 8082
