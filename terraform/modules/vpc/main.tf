@@ -265,23 +265,5 @@ resource "aws_security_group_rule" "rds_egress_all" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
 }
-resource "aws_security_group_rule" "node_ingress_from_cluster_sg_all" {
-  security_group_id        = aws_security_group.eks_node.id
-  type                     = "ingress"
-  description              = "All traffic from EKS cluster managed node SG"
-  from_port                = 0
-  to_port                  = 0
-  protocol                 = "-1"
-  source_security_group_id = aws_security_group.eks_cluster.id
-}
 
-resource "aws_security_group_rule" "cluster_ingress_from_node_sg_all" {
-  security_group_id        = aws_security_group.eks_cluster.id
-  type                     = "ingress"
-  description              = "All traffic from Karpenter/node SG"
-  from_port                = 0
-  to_port                  = 0
-  protocol                 = "-1"
-  source_security_group_id = aws_security_group.eks_node.id
-}
 
