@@ -1,6 +1,6 @@
 fullnameOverride: vets-service
 image:
-  tag: "4920da2"
+  tag: "d2c429e"
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/vets-service"
 service:
   port: 8083
