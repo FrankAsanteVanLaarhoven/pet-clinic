@@ -1,17 +1,13 @@
 fullnameOverride: vets-service
-
 image:
-  tag: "seed"
+  tag: ""
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/vets-service"
-
 service:
   port: 8083
-
 config:
   SPRING_PROFILES_ACTIVE: "docker,mysql,production"
   CONFIG_SERVER_URL: "http://config-server:8888"
   SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.c1o4ye84c8ab.eu-central-1.rds.amazonaws.com:3306/petclinic"
-
 env:
   - name: SPRING_DATASOURCE_USERNAME
     valueFrom:
@@ -23,7 +19,6 @@ env:
       secretKeyRef:
         name: rds-credentials
         key: password
-
 initContainers:
   - name: wait-for-config-server
     image: busybox:1.36

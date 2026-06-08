@@ -1,12 +1,9 @@
 fullnameOverride: config-server
-
 image:
-  tag: "seed"
+  tag: ""
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/config-server"
-
 service:
   port: 8888
-
 probes:
   startup:
     path: /actuator/health
@@ -14,7 +11,6 @@ probes:
     path: /actuator/health
   liveness:
     path: /actuator/health
-
 config:
   GIT_REPO: "https://github.com/spring-petclinic/spring-petclinic-microservices-config"
   SPRING_PROFILES_ACTIVE: "docker"

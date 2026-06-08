@@ -1,17 +1,13 @@
 fullnameOverride: api-gateway
-
 ingress:
   enabled: true
   scheme: internet-facing
   targetType: ip
-
 image:
-  tag: "seed"
+  tag: ""
   repository: "158709926611.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/api-gateway"
-
 service:
   port: 8080
-
 resources:
   requests:
     cpu: 200m
@@ -19,11 +15,9 @@ resources:
   limits:
     cpu: 1000m
     memory: 512Mi
-
 config:
   SPRING_PROFILES_ACTIVE: "docker"
   CONFIG_SERVER_URL: "http://config-server:8888"
-
 initContainers:
   - name: wait-for-config-server
     image: busybox:1.36
