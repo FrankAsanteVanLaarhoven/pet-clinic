@@ -117,25 +117,18 @@ module "addons" {
 
 data "aws_caller_identity" "current" {}
 
-
 # Allow traffic between the EKS-managed node primary SG and the Karpenter/node SG.
 # This is required when workloads are split across managed nodegroup nodes and Karpenter nodes.
-resource "aws_security_group_rule" "karpenter_ingress_from_managed_nodes_all" {
-  security_group_id        = module.vpc.eks_node_sg_id
-  type                     = "ingress"
-  description              = "All traffic from EKS-managed nodes"
-  from_port                = 0
-  to_port                  = 0
-  protocol                 = "-1"
-  source_security_group_id = module.eks.cluster_security_group_id
+resource "aws_vpc_security_group_ingress_rule" "karpenter_ingress_from_managed_nodes_all" {
+  security_group_id            = module.vpc.eks_node_sg_id
+  referenced_security_group_id = module.eks.cluster_security_group_id
+  ip_protocol                  = "-1"
+  description                  = "All traffic from EKS-managed nodes"
 }
 
-resource "aws_security_group_rule" "managed_nodes_ingress_from_karpenter_all" {
-  security_group_id        = module.eks.cluster_security_group_id
-  type                     = "ingress"
-  description              = "All traffic from Karpenter/node SG"
-  from_port                = 0
-  to_port                  = 0
-  protocol                 = "-1"
-  source_security_group_id = module.vpc.eks_node_sg_id
+resource "aws_vpc_security_group_ingress_rule" "managed_nodes_ingress_from_karpenter_all" {
+  security_group_id            = module.eks.cluster_security_group_id
+  referenced_security_group_id = module.vpc.eks_node_sg_id
+  ip_protocol                  = "-1"
+  description                  = "All traffic from Karpenter/node SG"
 }
